@@ -67,6 +67,8 @@ typedef struct
   RPT_reporting_t ***num_units_by_prodtype;
   RPT_reporting_t  **num_unit_days;
   RPT_reporting_t ***num_unit_days_by_prodtype;
+  RPT_reporting_t  **num_animals;
+  RPT_reporting_t ***num_animals_by_prodtype;
   RPT_reporting_t  **num_animal_days;
   RPT_reporting_t ***num_animal_days_by_prodtype;
   GPtrArray *cumul_outputs; /**< Cumulative outputs, is a list to make it easy
@@ -160,10 +162,14 @@ handle_before_each_simulation_event (struct adsm_module_t_ *self)
   background_zone_index = local_data->nzones - 1;
   RPT_reporting_set_integer (local_data->num_units[background_zone_index],
                              local_data->num_units_at_start);
+  RPT_reporting_set_integer (local_data->num_animals[background_zone_index],
+                             local_data->num_animals_at_start);
   for (prodtype = 0; prodtype < local_data->nprodtypes; prodtype++)
     {
       RPT_reporting_set_integer (local_data->num_units_by_prodtype[background_zone_index][prodtype],
                                  local_data->num_units_at_start_by_prodtype[prodtype]);
+      RPT_reporting_set_integer (local_data->num_animals_by_prodtype[background_zone_index][prodtype],
+                                 local_data->num_animals_at_start_by_prodtype[prodtype]);
     }
 
   for (zone_index = 0; zone_index < local_data->nzones; zone_index++)
@@ -227,6 +233,10 @@ handle_unit_zone_change_event (struct adsm_module_t_ *self,
   RPT_reporting_add_integer (local_data->num_units[new_zone_index], 1);
   RPT_reporting_sub_integer (local_data->num_units_by_prodtype[old_zone_index][prodtype], 1);
   RPT_reporting_add_integer (local_data->num_units_by_prodtype[new_zone_index][prodtype], 1);
+  RPT_reporting_sub_integer (local_data->num_animals[old_zone_index], unit->size);
+  RPT_reporting_add_integer (local_data->num_animals[new_zone_index], unit->size);
+  RPT_reporting_sub_integer (local_data->num_animals_by_prodtype[old_zone_index][prodtype], unit->size);
+  RPT_reporting_add_integer (local_data->num_animals_by_prodtype[new_zone_index][prodtype], unit->size);
 
   if (unit->state != Destroyed)
     {
@@ -602,6 +612,16 @@ new (sqlite3 * params, UNT_unit_list_t * units, projPJ projection,
         self->outputs, local_data->cumul_outputs },
 
       { &local_data->num_unit_days_by_prodtype, "unitDaysInZone%s%s", RPT_integer,
+        RPT_GPtrArray, zone_names, local_data->nzones,
+        RPT_GPtrArray, units->production_type_names, local_data->nprodtypes,
+        self->outputs, local_data->cumul_outputs },
+
+      { &local_data->num_animals, "animalsInZone%s", RPT_integer,
+        RPT_GPtrArray, zone_names, local_data->nzones,
+        RPT_NoSubcategory, NULL, 0,
+        self->outputs, local_data->cumul_outputs },
+
+      { &local_data->num_animals_by_prodtype, "animalsInZone%s%s", RPT_integer,
         RPT_GPtrArray, zone_names, local_data->nzones,
         RPT_GPtrArray, units->production_type_names, local_data->nprodtypes,
         self->outputs, local_data->cumul_outputs },
